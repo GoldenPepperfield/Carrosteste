@@ -1,4 +1,4 @@
-import { Calendar, Fuel, Gauge, Heart } from "lucide-react";
+import { Calendar, Fuel, Gauge, Heart, MapPin } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter } from "./ui/card";
@@ -22,6 +22,11 @@ export interface Car {
   color?: string;
   location?: string;
   description?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+  distance?: number;
 }
 
 interface CarCardProps {
@@ -58,7 +63,15 @@ export function CarCard({ car, onViewDetails }: CarCardProps) {
 
       <CardContent className="p-4">
         <div className="mb-2">
-          <p className="text-sm text-gray-600">{car.marca.nome}</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-sm text-gray-600">{car.marca.nome}</p>
+            {car.distance !== undefined && (
+              <span className="text-xs text-gray-500 flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {car.distance} km
+              </span>
+            )}
+          </div>
           <h3 className="text-lg">{car.name}</h3>
         </div>
 

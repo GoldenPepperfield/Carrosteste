@@ -3,7 +3,9 @@ import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { MapPin } from "lucide-react";
 import type { Marca } from "../types";
+import { portugueseCities } from "../lib/brands";
 
 interface CarFiltersProps {
   priceRange: number[];
@@ -18,6 +20,10 @@ interface CarFiltersProps {
   onConditionChange: (condition: string) => void;
   yearRange: number[];
   onYearChange: (value: number[]) => void;
+  selectedLocation: string;
+  onLocationChange: (location: string) => void;
+  maxDistance: number;
+  onMaxDistanceChange: (distance: number) => void;
   onReset: () => void;
   marcas: Record<string, Marca>;
 }
@@ -35,6 +41,10 @@ export function CarFilters({
   onConditionChange,
   yearRange,
   onYearChange,
+  selectedLocation,
+  onLocationChange,
+  maxDistance,
+  onMaxDistanceChange,
   onReset,
   marcas,
 }: CarFiltersProps) {
@@ -59,6 +69,47 @@ export function CarFilters({
     <div className="bg-white rounded-lg border p-6 space-y-6 sticky top-20">
       <div>
         <h3 className="mb-4">Filtros</h3>
+
+        {/* Location */}
+        <div className="space-y-2 mb-6">
+          <Label className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            Localização
+          </Label>
+          <Select value={selectedLocation} onValueChange={onLocationChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Todas as cidades" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as cidades</SelectItem>
+              {portugueseCities.map((city) => (
+                <SelectItem key={city.name} value={city.name}>
+                  {city.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Distance Range (only show when location is selected) */}
+        {selectedLocation && selectedLocation !== "all" && (
+          <div className="space-y-4 mb-6">
+            <Label>Distância Máxima</Label>
+            <div className="pt-2">
+              <Slider
+                min={10}
+                max={200}
+                step={10}
+                value={[maxDistance]}
+                onValueChange={(value) => onMaxDistanceChange(value[0])}
+                className="mb-2"
+              />
+            </div>
+            <div className="text-sm text-gray-600 text-center">
+              até {maxDistance} km de {selectedLocation}
+            </div>
+          </div>
+        )}
 
         {/* Condition */}
         <div className="space-y-2 mb-6">

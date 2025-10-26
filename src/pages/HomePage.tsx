@@ -4,8 +4,10 @@ import { CarFilters } from "../components/CarFilters";
 import { CarCard, type Car } from "../components/CarCard";
 import { CarDetailsDialog } from "../components/CarDetailsDialog";
 import { FeaturedCars } from "../components/FeaturedCars";
+import { BrandSelector } from "../components/BrandSelector";
 import { Footer } from "../components/Footer";
 import type { Marca } from "../types";
+import { calculateDistance, portugueseCities, carBrands } from "../lib/brands";
 
 interface HomePageProps {
   marcas: Record<string, Marca>;
@@ -20,6 +22,9 @@ export function HomePage({ marcas, cars, onNavigate }: HomePageProps) {
   const [selectedBrands, setSelectedBrands] = useState<number[]>([]);
   const [selectedFuels, setSelectedFuels] = useState<string[]>([]);
   const [selectedCondition, setSelectedCondition] = useState<string>("all");
+  const [selectedLocation, setSelectedLocation] = useState<string>("all");
+  const [maxDistance, setMaxDistance] = useState<number>(50);
+  const [selectedBrandKeys, setSelectedBrandKeys] = useState<string[]>([]);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -32,6 +37,12 @@ export function HomePage({ marcas, cars, onNavigate }: HomePageProps) {
   const handleBrandChange = (brandId: number) => {
     setSelectedBrands((prev) =>
       prev.includes(brandId) ? prev.filter((id) => id !== brandId) : [...prev, brandId]
+    );
+  };
+
+  const handleBrandKeyToggle = (brandKey: string) => {
+    setSelectedBrandKeys((prev) =>
+      prev.includes(brandKey) ? prev.filter((k) => k !== brandKey) : [...prev, brandKey]
     );
   };
 
@@ -48,6 +59,9 @@ export function HomePage({ marcas, cars, onNavigate }: HomePageProps) {
     setSelectedBrands([]);
     setSelectedFuels([]);
     setSelectedCondition("all");
+    setSelectedLocation("all");
+    setMaxDistance(50);
+    setSelectedBrandKeys([]);
   };
 
   const handleViewDetails = (car: Car) => {
@@ -55,7 +69,8 @@ export function HomePage({ marcas, cars, onNavigate }: HomePageProps) {
     setDialogOpen(true);
   };
 
-  const filteredCars = cars.filter((car) => {
+  // Filtrar e ordenar carros
+  let filteredCars = cars.filter((car) => {
     const priceMatch = car.price >= priceRange[0] && car.price <= priceRange[1];
     const yearMatch = car.year >= yearRange[0] && car.year <= yearRange[1];
     const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(car.type);
@@ -66,12 +81,52 @@ export function HomePage({ marcas, cars, onNavigate }: HomePageProps) {
       (selectedCondition === "novo" && car.isNew) ||
       (selectedCondition === "usado" && !car.isNew);
     
-    return priceMatch && yearMatch && typeMatch && brandMatch && fuelMatch && conditionMatch;
+    // Brand key filter (from brand selector)
+    const brandKeyMatch = selectedBrandKeys.length === 0 || 
+      selectedBrandKeys.some(key => {
+        const brand = carBrands[key as keyof typeof carBrands];
+        return brand && car.marca.nome.toLowerCase().includes(brand.name.toLowerCase());
+      });
+    
+    // Location filter
+    let locationMatch = true;
+    if (selectedLocation && selectedLocation !== "all" && car.coordinates) {
+      const userCity = portugueseCities.find(c => c.name === selectedLocation);
+      if (userCity) {
+        const distance = calculateDistance(
+          userCity.lat,
+          userCity.lng,
+          car.coordinates.lat,
+          car.coordinates.lng
+        );
+        locationMatch = distance <= maxDistance;
+      }
+    }
+    
+    return priceMatch && yearMatch && typeMatch && brandMatch && fuelMatch && conditionMatch && brandKeyMatch && locationMatch;
   });
+
+  // Ordenar por distância se houver localização selecionada
+  if (selectedLocation && selectedLocation !== "all") {
+    const userCity = portugueseCities.find(c => c.name === selectedLocation);
+    if (userCity) {
+      filteredCars = [...filteredCars].sort((a, b) => {
+        if (!a.coordinates || !b.coordinates) return 0;
+        const distA = calculateDistance(userCity.lat, userCity.lng, a.coordinates.lat, a.coordinates.lng);
+        const distB = calculateDistance(userCity.lat, userCity.lng, b.coordinates.lat, b.coordinates.lng);
+        return distA - distB;
+      });
+    }
+  }
 
   return (
     <>
       <Hero />
+
+      <BrandSelector 
+        selectedBrands={selectedBrandKeys} 
+        onBrandToggle={handleBrandKeyToggle}
+      />
 
       <FeaturedCars cars={cars} onViewDetails={handleViewDetails} onNavigate={onNavigate} />
 
@@ -98,6 +153,10 @@ export function HomePage({ marcas, cars, onNavigate }: HomePageProps) {
               onFuelChange={handleFuelChange}
               selectedCondition={selectedCondition}
               onConditionChange={setSelectedCondition}
+              selectedLocation={selectedLocation}
+              onLocationChange={setSelectedLocation}
+              maxDistance={maxDistance}
+              onMaxDistanceChange={setMaxDistance}
               onReset={handleReset}
               marcas={marcas}
             />
